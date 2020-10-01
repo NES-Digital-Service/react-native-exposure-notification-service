@@ -1,4 +1,5 @@
 import {NativeModules, EventSubscriptionVendor} from 'react-native';
+import {Version} from './types';
 
 export enum AuthorisedStatus {
   granted = 'granted',
@@ -22,7 +23,6 @@ export interface ConfigurationOptions {
   refreshToken: string;
   storeExposuresFor: number;
   fileLimit: number;
-  version: string;
   notificationTitle: string;
   notificationDesc: string;
   callbackNumber: string;
@@ -78,6 +78,8 @@ export interface ExposureNotificationModule extends EventSubscriptionVendor {
 
   start(): Promise<boolean>;
 
+  pause(): Promise<boolean>;
+
   stop(): Promise<boolean>;
 
   deleteAllData(): Promise<boolean>;
@@ -95,6 +97,10 @@ export interface ExposureNotificationModule extends EventSubscriptionVendor {
   status(): Promise<Status>;
 
   getLogData(): Promise<any>;
+
+  version(): Promise<Version>;
+
+  bundleId(): Promise<string>;
 
   /**
    * @platform android

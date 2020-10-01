@@ -54,7 +54,6 @@ public class ExposureNotificationModule: RCTEventEmitter {
         notificationTitle: configDict["notificationTitle"] as? String ?? "Close Contact Warning",
         notificationDesc: configDict["notificationDesc"] as? String ?? "The COVID Tracker App has detected that you may have been exposed to someone who has tested positive for COVID-19.",
         authToken: token,
-        version: (configDict["version"] as? String ?? Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String)!,
         fileLimit: configDict["fileLimit"] as? Int ?? 3,
         callbackNumber: configDict["callbackNumber"] as? String ?? "",
         analyticsOptin: configDict["analyticsOptin"] as? Bool ?? false
@@ -120,6 +119,16 @@ public class ExposureNotificationModule: RCTEventEmitter {
                             rejecter reject: @escaping RCTPromiseRejectBlock) {
         if #available(iOS 13.5, *) {
           ExposureProcessor.shared.start(resolve, rejecter: reject)
+        } else {
+            //nothing to do here
+            resolve(false)
+        }
+    }
+
+    @objc public func pause(_ resolve: @escaping RCTPromiseResolveBlock,
+                            rejecter reject: @escaping RCTPromiseRejectBlock) {
+        if #available(iOS 13.5, *) {
+          ExposureProcessor.shared.pause(resolve, rejecter: reject)
         } else {
             //nothing to do here
             resolve(false)
@@ -209,7 +218,19 @@ public class ExposureNotificationModule: RCTEventEmitter {
             resolve(true)
         }
     }
-  
+
+    @objc public func bundleId(_ resolve: @escaping RCTPromiseResolveBlock,
+                                    rejecter reject: @escaping RCTPromiseRejectBlock) {
+        resolve(Bundle.main.bundleIdentifier!)
+    }
+    
+    @objc public func version(_ resolve: @escaping RCTPromiseResolveBlock,
+                                    rejecter reject: @escaping RCTPromiseRejectBlock) {
+        let version = Storage.shared.version()
+        
+        resolve(version)
+    }
+    
     private func setupNotifications() {
         notificationCenter.addObserver(self,
               selector: #selector(onStatusChanged),
@@ -241,10 +262,19 @@ public class ExposureNotificationModule: RCTEventEmitter {
               status["type"] = ["bluetooth"]
           case .restricted:
               status["state"] = "restricted"
-          @unknown default:
+        case .paused:
+              status["state"] = "disabled"
+              status["type"] = ["paused"]
+        case .unauthorized:
+              status["state"] = "unavailable"
+              status["type"] = ["unauthorized"]
+        @unknown default:
               status["state"] = "unavailable"
         }
-
+        if ExposureManager.shared.isPaused() && (status["state"] as! String == "disabled" || status["state"] as! String == "unknown") {
+           status["state"] = "disabled"
+           status["type"] = ["paused"]
+        }
         os_log("Status of exposure service has changed %@", log: OSLog.exposure, type: .debug, status)
         sendEvent(withName: "exposureEvent", body: ["onStatusChanged": status])
       }

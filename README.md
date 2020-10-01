@@ -176,6 +176,16 @@ Used to stop contact tracing and all scheduled tasks. Exposure notifications mus
 
 ---
 
+##### `pause()`
+
+```javascript
+ExposureNotificationModule.pause();
+```
+
+Used to pause contact tracing. Use start() to unpause.
+
+---
+
 ##### `deleteAllData()`
 
 ```javascript
@@ -324,9 +334,10 @@ function Root() {
         storeExposuresFor: 14,
         fileLimit: 1,
         fileLimitiOS: 2
-      }}
-      appVersion="1.0.0"
+      }
       serverUrl="https://your.exposure.api/api"
+      keyServerUrl="https://your.exposure.api/api"
+      keyServerType=KeyServerType.nearform
       authToken="your-api-auth-token"
       refreshToken="your-api-refresh-token"
       notificationTitle="Close contact detected"
@@ -549,6 +560,18 @@ Checks the current status of `exposure` and `notifications` permissions and upda
 `() => Promise<void>`
 
 Requests permissions from the user for `exposure` and `notifications` permissions and updates the context
+
+##### `getVersion()`
+
+`() => Promise<Version>`
+
+Returns the version number for the app
+
+##### `getBundleId()`
+
+`() => Promise<string>`
+
+Returns the bundle identifier / package name for the app
 
 ##### `setExposureState()`
 

@@ -239,11 +239,15 @@ class Fetcher {
                     }
                 }
 
-                val dayInMs = 1000 * 60 * 60 * 24
-                val notificationDate = exposureEntity.createdTimestampMs
-                val daysSinceExposure = notificationDate - (exposureEntity.daysSinceLastExposure() * dayInMs)
+                val calendar = Calendar.getInstance()
+                calendar.add(Calendar.DAY_OF_YEAR, 0 - exposureEntity.daysSinceLastExposure())
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val daysSinceExposure = calendar.time.time
 
-                Events.raiseEvent(Events.INFO, "triggerCallback - sending: ${Date(daysSinceExposure)}")
+                Events.raiseEvent(Events.INFO, "triggerCallback - sending: ${daysSinceExposure} ${Date(daysSinceExposure)}")
                 val callbackParams = Callback(callbackNum, daysSinceExposure, payload)
                 val success = post("/callback", Gson().toJson(callbackParams), context)
 
@@ -264,7 +268,7 @@ class Fetcher {
         fun saveMetric(event: String, context: Context, payload: Map<String, Any>? = null) {
             try {
                 val analytics = SharedPrefs.getBoolean("analyticsOptin", context)
-                val version = SharedPrefs.getString("version", context)
+                val version = Tracing.version().getString("display").toString()
 
                 if(!analytics) {
                     Events.raiseEvent(Events.INFO, "saveMetric - not saving, no opt in")
@@ -276,11 +280,11 @@ class Fetcher {
                 val success = post("/metrics", Gson().toJson(metric), context)
 
                 if (!success) {
-                    Events.raiseEvent(Events.ERROR, "saveMetric - failed")
+                    Events.raiseEvent(Events.ERROR, "saveMetric - failed: $event")
                     return
                 }
 
-                Events.raiseEvent(Events.INFO, "saveMetric - success")
+                Events.raiseEvent(Events.INFO, "saveMetric - success, $event, $version")
             } catch(ex: Exception) {
                 Events.raiseError("triggerCallback - error", ex)
             }

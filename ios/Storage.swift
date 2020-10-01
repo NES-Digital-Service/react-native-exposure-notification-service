@@ -16,11 +16,11 @@ public class Storage {
         let notificationTitle: String
         let notificationDesc: String
         var authToken: String
-        var version: String
         var fileLimit: Int
         var datesLastRan: String!
         var lastExposureIndex: Int!
         var notificationRaised: Bool!
+        var paused: Bool!
         var callbackNumber: String!
         var analyticsOptin: Bool!
         var dailyTrace: Date?
@@ -43,6 +43,15 @@ public class Storage {
     public static func getDomain(_ url: String) -> String {
         let url = URL(string: url)
         return url!.host!
+    }
+    
+    public func version() -> [String: String] {
+        var version: [String: String] = [:]
+        version["version"] = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+        version["build"] = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
+        version["display"] = "\(version["version"] ?? "unknown").\(version["build"] ?? "unknown")"
+               
+        return version
     }
     
     public func readSettings(_ context: NSManagedObjectContext) -> Config! {
@@ -77,11 +86,11 @@ public class Storage {
               notificationTitle: data[0].value(forKey: "notificationTitle") as! String,
               notificationDesc: data[0].value(forKey: "notificationDesc") as! String,
               authToken: authToken,
-              version: data[0].value(forKey: "version") as! String,
               fileLimit: data[0].value(forKey: "fileLimit") as! Int,
               datesLastRan: data[0].value(forKey: "datesLastRan") as? String ?? "",
               lastExposureIndex: data[0].value(forKey: "lastIndex") as? Int,
               notificationRaised: data[0].value(forKey: "notificationRaised") as? Bool,
+              paused: data[0].value(forKey: "servicePaused") as? Bool ?? false,
               callbackNumber: callbackNum,
               analyticsOptin: data[0].value(forKey: "analyticsOptin") as? Bool,
               dailyTrace: data[0].value(forKey: "dailyTrace") as? Date,
@@ -179,6 +188,29 @@ public class Storage {
 
     }
 
+    public func flagPauseStatus(_ context: NSManagedObjectContext, _ paused: Bool) {
+      let fetchRequest =
+      NSFetchRequest<NSManagedObject>(entityName: "Settings")
+
+      do {
+          let settingsResult = try context.fetch(fetchRequest)
+
+          if settingsResult.count > 0 {
+            let managedObject = settingsResult[0]
+
+            managedObject.setValue(paused, forKey: "servicePaused")
+            
+            try context.save()
+          } else {
+              os_log("No settings have been stored, can't flag pause status", log: OSLog.storage, type: .debug)
+          }
+          
+      } catch {
+        os_log("Could not flag as paused. %@", log: OSLog.storage, type: .error, error.localizedDescription)
+      }
+      os_log("Flagged that service has been paused - %d", log: OSLog.storage, type: .debug, paused)
+    }
+
     public func updateAppSettings(_ config: Config) {
         
        let context = PersistentContainer.shared.newBackgroundContext()
@@ -217,7 +249,6 @@ public class Storage {
          managedObject.setValue(config.notificationTitle, forKey: "notificationTitle")
          managedObject.setValue(config.notificationDesc, forKey: "notificationDesc")
          managedObject.setValue(config.analyticsOptin, forKey: "analyticsOptin")
-         managedObject.setValue(config.version, forKey: "version")
          managedObject.setValue(config.fileLimit, forKey: "fileLimit")
 
          try context.save()
